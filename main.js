@@ -19,6 +19,14 @@ const checkUserAlreadyExists = (username, salt, buffer) => {
   return match
 }
 
+const checkUserPassword = (buffer, hashedBuffer) => {
+  const keyBuffer = Buffer.from(buffer, 'hex')
+  if (keyBuffer.length === hashedBuffer.length) {
+    const match = crypto.timingSafeEqual(hashedBuffer, keyBuffer)
+  }
+  return false
+}
+
 socket.on('connect_error', function (err) {
   console.log('Falha de conexao')
   console.log(err)
@@ -31,6 +39,7 @@ socket.on('connect', function () {
 const readLineMenu = `------MENU------\n
 Opcoes:\n
 1- Cadastrar cliente\n
+2- Autenticacao com senha\n
 3- Autenticação com token\n
 4- Autenticação 2FA\n
 6- Sair do programa \n
@@ -59,6 +68,31 @@ const options = {
           return waitForUserInput()
         }
         console.log('Erro! A senha ou usuário do cliente nao pode estar vazia!')
+        return waitForUserInput()
+      })
+    })
+  },
+  2: () => {
+    readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
+      readline.question('Qual a senha do novo cliente?\n >', (password) => {
+        const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+        const user = Object.assign(new Client(), {
+          ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
+        })
+        console.log('🚀 ~ file: main.js ~ line 80 ~ user ~ user', user)
+
+        if (!user.username) {
+          console.log('cliente nao registrado')
+          return waitForUserInput()
+        }
+
+        const hashedBuffer = user.encryptGCM(password, Buffer.from(user.derivedKey.data), user.salt)
+        if (checkUserPassword(user.password, hashedBuffer)) {
+          console.log('Login Sucessful!')
+          return waitForUserInput()
+        }
+
+        console.log('Erro! A senha ou usuário estao erradas!')
         return waitForUserInput()
       })
     })

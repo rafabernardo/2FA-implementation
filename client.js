@@ -13,14 +13,33 @@ class Client {
     if (this.derivedKey) {
       return console.log('Key already generated.')
     }
-    this.salt = crypto.randomBytes(64).toString('hex')
+    this.salt = crypto.randomBytes(12).toString('hex')
     this.username = crypto.scryptSync(this.username, this.salt, 64)
-    this.derivedKey = crypto.pbkdf2Sync(this.password, this.salt, 100000, 64, 'sha512')
-    // this.password = ''
+    this.derivedKey = crypto.pbkdf2Sync(this.password, this.salt, 100000, 32, 'sha512')
+    this.password = this.encryptGCM(this.password, this.derivedKey, this.salt)
   }
 
   getCurrentTime() {
     return new Date()
+  }
+
+  encryptGCM(password, derivedKey, salt) {
+    console.log('🚀 ~ file: client.js ~ line 27 ~ Client ~ encryptGCM ~ salt', salt)
+    console.log('🚀 ~ file: client.js ~ line 27 ~ Client ~ encryptGCM ~ derivedKey', derivedKey)
+    console.log('🚀 ~ file: client.js ~ line 27 ~ Client ~ encryptGCM ~ password', password)
+    //fonte: https://lollyrock.com/posts/nodejs-encryption/
+
+    //O IV e a chave (ou chaves) não devem ser guardados em nenhum lugar. Esses parâmetros devem
+    //ser derivados usando o PBKDF2. Para criar um salt específico para cada usuário, você deve usar o
+    //orteio e guardar o salt no arquivo. O salt pode ser guardado sem criptografia.
+    //Nao sei ao certo se tem que usar a derivedKey e o salt dessa forma aqui mas foi o que eu entendi baseado no texto ali em cima
+    const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, salt)
+
+    // encrypt the given password
+    const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
+
+    // generate output
+    return encrypted
   }
 
   generateNewClientRequest() {
