@@ -23,6 +23,7 @@ const checkUserPassword = (buffer, hashedBuffer) => {
   const keyBuffer = Buffer.from(buffer, 'hex')
   if (keyBuffer.length === hashedBuffer.length) {
     const match = crypto.timingSafeEqual(hashedBuffer, keyBuffer)
+    return match
   }
   return false
 }
