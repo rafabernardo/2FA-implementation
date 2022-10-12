@@ -11,13 +11,6 @@ const readline = require('readline').createInterface({
   output: process.stdout,
 })
 
-const checkUserAlreadyExists = (username, salt, buffer) => {
-  const keyBuffer = Buffer.from(buffer, 'hex')
-  const hashedBuffer = crypto.scryptSync(username, salt, 64)
-  const match = crypto.timingSafeEqual(hashedBuffer, keyBuffer)
-  return match
-}
-
 const checkUserPassword = (buffer, hashedBuffer) => {
   const keyBuffer = Buffer.from(buffer, 'hex')
   if (keyBuffer.length === hashedBuffer.length) {
@@ -36,6 +29,14 @@ socket.on('connect', function () {
   console.log('Conexao estabelecida.')
 })
 
+checkIfUserAlreadyExists = async (username) => {
+  return await new Promise((resolve) => {
+    socket.emit('checkIfUserAlreadyExists', username, (answer) => {
+      resolve(answer)
+    })
+  })
+}
+
 const readLineMenu = `------MENU------\n
 Opcoes:\n
 1- Cadastrar cliente\n
@@ -51,14 +52,14 @@ const options = {
   1: () => {
     let tempUser = null
     let tempPass = null
-    readline.question('Qual o usuario do novo cliente?\n > ', (username) => {
-      const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
-      if (users.some((user) => checkUserAlreadyExists(username, user.salt, user.username))) {
+    readline.question('Qual o usuario do novo cliente?\n > ', async (username) => {
+      tempUser = username
+
+      const userExists = await checkIfUserAlreadyExists(username)
+      if (userExists) {
         console.log('cliente ja registrado')
         return waitForUserInput()
       }
-
-      tempUser = username
       readline.question('Qual a senha do novo cliente?\n >', (password) => {
         tempPass = password
         if (tempUser.trim() !== '' && tempPass.trim() !== '') {
@@ -144,9 +145,9 @@ const waitForUserInput = () => {
 
 waitForUserInput()
 
-function findUser(username){
+function findUser(username) {
   const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
   return Object.assign(new Client(), {
-  ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
-  })    
+    ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
+  })
 }
