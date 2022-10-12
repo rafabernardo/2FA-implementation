@@ -5,7 +5,6 @@ const crypto = require('crypto')
 const Client = require('./client')
 
 const socket = io.connect('http://localhost:3000', { reconnect: false, reconnectionAttempts: 10 })
-const clients = []
 
 const readline = require('readline').createInterface({
   input: process.stdin,
@@ -80,7 +79,6 @@ const options = {
         const user = Object.assign(new Client(), {
           ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
         })
-        console.log('🚀 ~ file: main.js ~ line 80 ~ user ~ user', user)
 
         if (!user.username) {
           console.log('cliente nao registrado')
@@ -98,27 +96,16 @@ const options = {
       })
     })
   },
-  // 2: () => {
-  //     readline.question('Informe o usuário do cliente a ser cadastrado no servidor.\n > ', username => {
-  //         clients.map(client => {
-  //             if (client.username === username) {
-  //                 client.newClientSocket(socket)
-  //                 return waitForUserInput()
-  //             }
-  //         })
-  //         console.log('Usuario nao encontrado!')
-  //         return waitForUserInput()
-  //     })
-  // },
   3: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      console.log('🚀 ~ file: main.js ~ line 78 ~ clients.map ~ clients', clients)
-      clients.map((client) => {
-        if (client.username === username) {
-          client.clientLoginSocket(socket)
-          return waitForUserInput()
-        }
+      const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+      const user = Object.assign(new Client(), {
+        ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
       })
+      if (user.username) {
+        user.clientLoginSocket(socket)
+        return waitForUserInput()
+      }
       console.log('Usuario nao encontrado!')
       return waitForUserInput()
     })
@@ -126,15 +113,13 @@ const options = {
 
   4: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      let foundClient = null
-      clients.map((client) => {
-        if (client.username === username) {
-          foundClient = client
-        }
+      const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+      const user = Object.assign(new Client(), {
+        ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
       })
-      if (foundClient) {
+      if (user.username) {
         readline.question('Informe a chave 2FA recebida na autenticacao de token\n > ', (key) => {
-          foundClient.checkTwoFactorAuthSocket(key, socket)
+          user.checkTwoFactorAuthSocket(key, socket)
           return waitForUserInput()
         })
       }
@@ -142,31 +127,15 @@ const options = {
       return waitForUserInput()
     })
   },
-  //   5: () => {
-  //     readline.question('Informe o usuário do cliente que deseja enviar mensagens.\n > ', (username) => {
-  //       let foundClient = null
-  //       clients.map((client) => {
-  //         if (client.username === username) {
-  //           foundClient = client
-  //         }
-  //       })
-  //       if (foundClient) {
-  //         readline.question('Informe a mensagem a ser enviada para o servidor\n > ', (message) => {
-  //           return foundClient.clientSendMessage(foundClient, message, socket)
-  //         })
-  //       }
-  //       console.log('Usuario nao encontrado!')
-  //       return waitForUserInput()
-  //     })
-  //   },
   6: () => {
     console.log('Bye-bye!')
     readline.close()
     return process.exit()
   },
   7: () => {
-    clients.map((client) => {
-      console.log(client)
+    const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+    users.map((user) => {
+      console.log(user)
     })
     return waitForUserInput()
   },
