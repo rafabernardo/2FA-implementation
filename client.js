@@ -36,7 +36,7 @@ class Client {
 
     return {
       username: this.username,
-      generatedToken: this.derivedKey,
+      derivedKey: this.derivedKey,
       currentTime: this.getCurrentTime(),
     }
   }
@@ -48,11 +48,11 @@ class Client {
   //   })
   // }
 
-  clientLoginSocket = async (socket) => {
-    socket.emit('login', this.generateNewClientRequest(), (response) => {
-      console.log(response.status)
-    })
-  }
+  // clientLoginSocket = async (socket) => {
+  //   socket.emit('login', this.generateNewClientRequest(), (response) => {
+  //     console.log(response.status)
+  //   })
+  // }
 
   checkTwoFactorAuthSocket = async (key, socket) => {
     socket.emit('2FAToken', this.generateNewClientRequest(), key, (response) => {
@@ -60,11 +60,11 @@ class Client {
     })
   }
 
-  registerUser(client, socket) {
-    socket.emit('newClient', client, (response) => {
-      console.log(response)
-    })
-  }
+  // registerUser(client, socket) {
+  //   socket.emit('newClient', client, (response) => {
+  //     console.log(response)
+  //   })
+  // }
 }
 
 module.exports = Client

@@ -44,46 +44,52 @@ const options = {
     readline.question('Qual o usuario do novo cliente?\n > ', async (username) => {
       const userExists = await checkIfUserAlreadyExists(username)
       if (userExists) {
-        console.log('cliente ja registrado')
+        console.log('Cliente ja registrado\n')
         return waitForUserInput()
       }
-      readline.question('Qual a senha do novo cliente?\n >', (password) => {
+      readline.question('Qual a senha do novo cliente?\n >', async (password) => {
         if (username.trim() !== '' && password.trim() !== '') {
-          const client = new Client(username, password)
-          client.registerUser(client, socket)
-          // console.log('Novo cliente cadastrado')
+          // const client = new Client(username, password)
+          const response = await new Promise((resolve) => {
+            socket.emit('newClient', { username, password }, (answer) => {
+              resolve(answer)
+            })
+          })
+          console.log(`${response} \n`)
           return waitForUserInput()
         }
-        console.log('Erro! A senha ou usuário do cliente nao pode estar vazia!')
+        console.log('Erro! A senha ou usuário do cliente nao pode estar vazia!\n')
         return waitForUserInput()
       })
     })
   },
   2: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      readline.question('Qual a senha do novo cliente?\n >', async (password) => {
+      readline.question('Qual a senha do cliente?\n >', async (password) => {
         const isLogged = await new Promise((resolve) => {
           socket.emit('login', { username, password }, (answer) => {
             resolve(answer)
           })
         })
         if (isLogged) {
-          console.log('Login Sucessful!')
+          console.log('Login Sucessful!\n')
           return waitForUserInput()
         }
-        console.log('Erro! A senha ou usuário estao erradas!')
+        console.log('Erro! A senha ou usuário estao erradas!\n')
         return waitForUserInput()
       })
     })
   },
   3: () => {
-    readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      const user = findUser(username)
-      if (user.username) {
-        user.clientLoginSocket(socket)
-        return waitForUserInput()
+    readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', async (username) => {
+      const { token } = await new Promise((resolve) => {
+        socket.emit('generate2FAToken', username, (answer) => {
+          resolve(answer)
+        })
+      })
+      if (token) {
+        console.log(`Token: ${token}\n`)
       }
-      console.log('Usuario nao encontrado!')
       return waitForUserInput()
     })
   },

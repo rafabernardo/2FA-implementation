@@ -7,8 +7,9 @@ const crypto = require('crypto')
 
 const Client = require('./client')
 
-const registerNewClient = async (client, callback) => {
+const registerNewClient = async (user, callback) => {
   const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+  const client = new Client(user.username, user.password)
   client.generateNewClientRequest()
   users.push(client)
   fsExtra.writeJson(
@@ -24,18 +25,29 @@ const registerNewClient = async (client, callback) => {
   )
 }
 
-const verifyScryptHash = async (clientInfo, callback) => {
-  if (!clientInfo.generatedToken) {
+const verifyScryptHash = async (username, callback) => {
+  const clientInfo = findUser(username)
+
+  if (!clientInfo.username) {
+    callback({
+      status: 'Error finding your user',
+    })
+    return console.log('Error finding your user')
+  }
+  if (!clientInfo.derivedKey) {
     callback({
       status: 'Error creating your 2FA',
     })
     return console.log('Error creating your 2FA')
   }
 
-  const twoFactorToken = createTwoFactorToken(clientInfo.generatedToken)
-  callback({
-    status: twoFactorToken,
-  })
+  const twoFactorToken = createTwoFactorToken(clientInfo.derivedKey)
+  if (twoFactorToken) {
+    callback({
+      token: twoFactorToken,
+    })
+    return
+  }
 
   callback({
     status: 'Error creating your 2FA: Internal server error.',
@@ -95,7 +107,8 @@ const login = (userInfo, callback) => {
   const user = findUser(userInfo.username)
   if (!user.username) {
     console.log('cliente nao registrado')
-    return waitForUserInput()
+    callback(false)
+    return
   }
 
   const hashedBuffer = user.encryptGCM(userInfo.password, Buffer.from(user.derivedKey.data), user.salt)
@@ -117,8 +130,8 @@ io.on('connection', function (socket) {
     login(userInfo, callback)
   })
 
-  socket.on('generate2FAToken', function (userInfo, callback) {
-    verifyScryptHash(userInfo, callback)
+  socket.on('generate2FAToken', function (username, callback) {
+    verifyScryptHash(username, callback)
   })
 
   socket.on('2FAToken', function (userInfo, twoFactorKey, callback) {
