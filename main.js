@@ -1,8 +1,5 @@
 const io = require('socket.io-client')
 const fsExtra = require('fs-extra')
-const crypto = require('crypto')
-
-const Client = require('./client')
 
 const socket = io.connect('http://localhost:3000', { reconnect: false, reconnectionAttempts: 10 })
 
@@ -49,7 +46,6 @@ const options = {
       }
       readline.question('Qual a senha do novo cliente?\n >', async (password) => {
         if (username.trim() !== '' && password.trim() !== '') {
-          // const client = new Client(username, password)
           const response = await new Promise((resolve) => {
             socket.emit('newClient', { username, password }, (answer) => {
               resolve(answer)
@@ -66,16 +62,12 @@ const options = {
   2: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
       readline.question('Qual a senha do cliente?\n >', async (password) => {
-        const isLogged = await new Promise((resolve) => {
+        const { status } = await new Promise((resolve) => {
           socket.emit('login', { username, password }, (answer) => {
             resolve(answer)
           })
         })
-        if (isLogged) {
-          console.log('Login Sucessful!\n')
-          return waitForUserInput()
-        }
-        console.log('Erro! A senha ou usuário estao erradas!\n')
+        console.log(status)
         return waitForUserInput()
       })
     })
@@ -96,15 +88,15 @@ const options = {
 
   4: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      const user = findUser(username)
-      if (user.username) {
-        readline.question('Informe a chave 2FA recebida na autenticacao de token\n > ', (key) => {
-          user.checkTwoFactorAuthSocket(key, socket)
-          return waitForUserInput()
+      readline.question('Informe a chave 2FA recebida na autenticacao de token\n > ', async (key) => {
+        const { status } = await new Promise((resolve) => {
+          socket.emit('2FAToken', username, key, (answer) => {
+            resolve(answer)
+          })
         })
-      }
-      console.log('Usuario nao encontrado!')
-      return waitForUserInput()
+        console.log(status)
+        return waitForUserInput()
+      })
     })
   },
   6: () => {

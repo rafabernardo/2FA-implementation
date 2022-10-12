@@ -60,8 +60,13 @@ const createTwoFactorToken = (key) => {
   return totp.generate(buffer.toString('hex'))
 }
 
-const checkTwoFactorToken = (clientInfo, key, callback) => {
-  const buffer = Buffer.from(clientInfo.generatedToken)
+const checkTwoFactorToken = (username, key, callback) => {
+  const user = findUser(username)
+  if (!user.username) {
+    callback({ status: 'Cliente nao registrado' })
+    return
+  }
+  const buffer = Buffer.from(user.derivedKey)
   const match = totp.check(key, buffer.toString('hex'))
   if (match) {
     callback({
@@ -106,13 +111,17 @@ const checkUserPassword = (buffer, hashedBuffer) => {
 const login = (userInfo, callback) => {
   const user = findUser(userInfo.username)
   if (!user.username) {
-    console.log('cliente nao registrado')
-    callback(false)
+    callback({ status: 'Cliente nao registrado' })
     return
   }
 
   const hashedBuffer = user.encryptGCM(userInfo.password, Buffer.from(user.derivedKey.data), user.salt)
-  callback(checkUserPassword(user.password, hashedBuffer))
+  if (checkUserPassword(user.password, hashedBuffer)) {
+    callback({ status: 'Usuario Logado com sucesso!' })
+    return
+  }
+
+  callback({ status: 'Falha ao logar usuario!' })
 }
 
 io.on('connection', function (socket) {
@@ -134,8 +143,8 @@ io.on('connection', function (socket) {
     verifyScryptHash(username, callback)
   })
 
-  socket.on('2FAToken', function (userInfo, twoFactorKey, callback) {
-    checkTwoFactorToken(userInfo, twoFactorKey, callback)
+  socket.on('2FAToken', function (username, twoFactorKey, callback) {
+    checkTwoFactorToken(username, twoFactorKey, callback)
   })
 })
 

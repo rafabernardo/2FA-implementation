@@ -54,11 +54,11 @@ class Client {
   //   })
   // }
 
-  checkTwoFactorAuthSocket = async (key, socket) => {
-    socket.emit('2FAToken', this.generateNewClientRequest(), key, (response) => {
-      console.log(response)
-    })
-  }
+  // checkTwoFactorAuthSocket = async (key, socket) => {
+  //   socket.emit('2FAToken', this.generateNewClientRequest(), key, (response) => {
+  //     console.log(response)
+  //   })
+  // }
 
   // registerUser(client, socket) {
   //   socket.emit('newClient', client, (response) => {
