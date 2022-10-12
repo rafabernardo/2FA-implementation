@@ -40,7 +40,7 @@ const readLineMenu = `------MENU------\n
 Opcoes:\n
 1- Cadastrar cliente\n
 2- Autenticacao com senha\n
-3- Autenticação com token\n
+3- Gerar token 2FA\n
 4- Autenticação 2FA\n
 6- Sair do programa \n
 7- Listar clientes - DEBUG \n
@@ -75,11 +75,7 @@ const options = {
   2: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
       readline.question('Qual a senha do novo cliente?\n >', (password) => {
-        const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
-        const user = Object.assign(new Client(), {
-          ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
-        })
-
+        const user = findUser(username)
         if (!user.username) {
           console.log('cliente nao registrado')
           return waitForUserInput()
@@ -98,10 +94,7 @@ const options = {
   },
   3: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
-      const user = Object.assign(new Client(), {
-        ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
-      })
+      const user = findUser(username)
       if (user.username) {
         user.clientLoginSocket(socket)
         return waitForUserInput()
@@ -113,10 +106,7 @@ const options = {
 
   4: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
-      const user = Object.assign(new Client(), {
-        ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
-      })
+      const user = findUser(username)
       if (user.username) {
         readline.question('Informe a chave 2FA recebida na autenticacao de token\n > ', (key) => {
           user.checkTwoFactorAuthSocket(key, socket)
@@ -153,3 +143,10 @@ const waitForUserInput = () => {
 }
 
 waitForUserInput()
+
+function findUser(username){
+  const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+  return Object.assign(new Client(), {
+  ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
+  })    
+}
