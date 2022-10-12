@@ -1,7 +1,6 @@
 const app = require('express')()
 const http = require('http').Server(app)
 const io = require('socket.io')(http)
-const crypto = require('crypto')
 const { totp } = require('otplib')
 
 const registerNewClient = async (userInfo, callback) => {
@@ -27,7 +26,7 @@ const verifyScryptHash = async (clientInfo, callback) => {
     return console.log('Error creating your 2FA')
   }
 
-  const twoFactorToken = createTwoFactorToken(clientInfo.generatedToken.toString('hex'))
+  const twoFactorToken = createTwoFactorToken(clientInfo.generatedToken)
   callback({
     status: twoFactorToken,
   })
@@ -38,12 +37,14 @@ const verifyScryptHash = async (clientInfo, callback) => {
 }
 
 const createTwoFactorToken = (key) => {
-  totp.options = { digits: 10, algorithm: 'sha512', step: 30 }
-  return totp.generate(key)
+  const buffer = Buffer.from(key)
+  totp.options = { digits: 10, algorithm: 'sha512', step: 60 }
+  return totp.generate(buffer.toString('hex'))
 }
 
 const checkTwoFactorToken = (clientInfo, key, callback) => {
-  const match = totp.check(key, clientInfo.generatedToken.toString('hex'))
+  const buffer = Buffer.from(clientInfo.generatedToken)
+  const match = totp.check(key, buffer.toString('hex'))
   if (match) {
     callback({
       status: 'Login Sucessful!',
