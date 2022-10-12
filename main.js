@@ -11,15 +11,6 @@ const readline = require('readline').createInterface({
   output: process.stdout,
 })
 
-const checkUserPassword = (buffer, hashedBuffer) => {
-  const keyBuffer = Buffer.from(buffer, 'hex')
-  if (keyBuffer.length === hashedBuffer.length) {
-    const match = crypto.timingSafeEqual(hashedBuffer, keyBuffer)
-    return match
-  }
-  return false
-}
-
 socket.on('connect_error', function (err) {
   console.log('Falha de conexao')
   console.log(err)
@@ -50,22 +41,17 @@ Opcoes:\n
 
 const options = {
   1: () => {
-    let tempUser = null
-    let tempPass = null
     readline.question('Qual o usuario do novo cliente?\n > ', async (username) => {
-      tempUser = username
-
       const userExists = await checkIfUserAlreadyExists(username)
       if (userExists) {
         console.log('cliente ja registrado')
         return waitForUserInput()
       }
       readline.question('Qual a senha do novo cliente?\n >', (password) => {
-        tempPass = password
-        if (tempUser.trim() !== '' && tempPass.trim() !== '') {
-          const client = new Client(tempUser, tempPass)
-          client.registerUser(client)
-          console.log('Novo cliente cadastrado')
+        if (username.trim() !== '' && password.trim() !== '') {
+          const client = new Client(username, password)
+          client.registerUser(client, socket)
+          // console.log('Novo cliente cadastrado')
           return waitForUserInput()
         }
         console.log('Erro! A senha ou usuário do cliente nao pode estar vazia!')
@@ -75,19 +61,16 @@ const options = {
   },
   2: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      readline.question('Qual a senha do novo cliente?\n >', (password) => {
-        const user = findUser(username)
-        if (!user.username) {
-          console.log('cliente nao registrado')
-          return waitForUserInput()
-        }
-
-        const hashedBuffer = user.encryptGCM(password, Buffer.from(user.derivedKey.data), user.salt)
-        if (checkUserPassword(user.password, hashedBuffer)) {
+      readline.question('Qual a senha do novo cliente?\n >', async (password) => {
+        const isLogged = await new Promise((resolve) => {
+          socket.emit('login', { username, password }, (answer) => {
+            resolve(answer)
+          })
+        })
+        if (isLogged) {
           console.log('Login Sucessful!')
           return waitForUserInput()
         }
-
         console.log('Erro! A senha ou usuário estao erradas!')
         return waitForUserInput()
       })
@@ -144,10 +127,3 @@ const waitForUserInput = () => {
 }
 
 waitForUserInput()
-
-function findUser(username) {
-  const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
-  return Object.assign(new Client(), {
-    ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
-  })
-}

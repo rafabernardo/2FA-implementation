@@ -41,12 +41,12 @@ class Client {
     }
   }
 
-  newClientSocket = async (socket) => {
-    socket.emit('newClient', this.generateNewClientRequest(), (response) => {
-      console.log(response)
-      return response
-    })
-  }
+  // newClientSocket = async (socket) => {
+  //   socket.emit('newClient', this.generateNewClientRequest(), (response) => {
+  //     console.log(response)
+  //     return response
+  //   })
+  // }
 
   clientLoginSocket = async (socket) => {
     socket.emit('login', this.generateNewClientRequest(), (response) => {
@@ -60,21 +60,10 @@ class Client {
     })
   }
 
-  registerUser(user) {
-    const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
-    user.generateNewClientRequest()
-    users.push(user)
-    fsExtra.writeJson(
-      './users.json',
-      { users: users },
-      {
-        spaces: 2,
-      },
-      function (err) {
-        if (err) throw err
-        console.log('Updated!')
-      }
-    )
+  registerUser(client, socket) {
+    socket.emit('newClient', client, (response) => {
+      console.log(response)
+    })
   }
 }
 

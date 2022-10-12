@@ -5,19 +5,23 @@ const { totp } = require('otplib')
 const fsExtra = require('fs-extra')
 const crypto = require('crypto')
 
-const registerNewClient = async (userInfo, callback) => {
-  // if (userInfos.some((info) => info.username === userInfo.username)) {
-  //   return callback({
-  //     status: `Error! Username: '${userInfo.username}' already exists!`,
-  //   })
-  // }
-  // const scryptToken = scryptTokenGenerator(userInfo.generatedToken, userInfo.username)
-  // userInfo = { ...userInfo, scryptToken }
-  // userInfos.push(userInfo)
-  // console.log(`New client: ${userInfo.username} registered successfully!`)
-  // return callback({
-  //   status: `Stored - New client: ${userInfo.username}`,
-  // })
+const Client = require('./client')
+
+const registerNewClient = async (client, callback) => {
+  const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+  client.generateNewClientRequest()
+  users.push(client)
+  fsExtra.writeJson(
+    './users.json',
+    { users: users },
+    {
+      spaces: 2,
+    },
+    function (err) {
+      if (err) callback('Falha ao cadastrar cliente!')
+      callback('Novo cliente cadastrado!')
+    }
+  )
 }
 
 const verifyScryptHash = async (clientInfo, callback) => {
@@ -65,10 +69,37 @@ const checkUserAlreadyExists = (username, salt, buffer) => {
   return match
 }
 
+const findUser = (username) => {
+  const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
+  return Object.assign(new Client(), {
+    ...users.find((user) => checkUserAlreadyExists(username, user.salt, user.username)),
+  })
+}
+
 const isNewUser = (userName, callback) => {
   const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
   const userNameAlreadyExists = users.some((user) => checkUserAlreadyExists(userName, user.salt, user.username))
   callback(userNameAlreadyExists)
+}
+
+const checkUserPassword = (buffer, hashedBuffer) => {
+  const keyBuffer = Buffer.from(buffer, 'hex')
+  if (keyBuffer.length === hashedBuffer.length) {
+    const match = crypto.timingSafeEqual(hashedBuffer, keyBuffer)
+    return match
+  }
+  return false
+}
+
+const login = (userInfo, callback) => {
+  const user = findUser(userInfo.username)
+  if (!user.username) {
+    console.log('cliente nao registrado')
+    return waitForUserInput()
+  }
+
+  const hashedBuffer = user.encryptGCM(userInfo.password, Buffer.from(user.derivedKey.data), user.salt)
+  callback(checkUserPassword(user.password, hashedBuffer))
 }
 
 io.on('connection', function (socket) {
@@ -83,6 +114,10 @@ io.on('connection', function (socket) {
   })
 
   socket.on('login', function (userInfo, callback) {
+    login(userInfo, callback)
+  })
+
+  socket.on('generate2FAToken', function (userInfo, callback) {
     verifyScryptHash(userInfo, callback)
   })
 
