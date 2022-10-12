@@ -30,15 +30,15 @@ const verifyScryptHash = async (username, callback) => {
 
   if (!clientInfo.username) {
     callback({
-      status: 'Error finding your user',
+      status: 'Error ao procurar usuário',
     })
-    return console.log('Error finding your user')
+    return console.log('Error ao procurar usuário')
   }
   if (!clientInfo.derivedKey) {
     callback({
-      status: 'Error creating your 2FA',
+      status: 'Erro ao criar 2FA',
     })
-    return console.log('Error creating your 2FA')
+    return console.log('Erro ao criar 2FA')
   }
 
   const twoFactorToken = createTwoFactorToken(clientInfo.derivedKey)
@@ -50,7 +50,7 @@ const verifyScryptHash = async (username, callback) => {
   }
 
   callback({
-    status: 'Error creating your 2FA: Internal server error.',
+    status: 'Erro ao criar 2FA: Internal server error.',
   })
 }
 
@@ -70,12 +70,12 @@ const checkTwoFactorToken = (username, key, callback) => {
   const match = totp.check(key, buffer.toString('hex'))
   if (match) {
     callback({
-      status: 'Login Sucessful!',
+      status: 'Usuário Logado com sucesso!',
     })
   }
 
   callback({
-    status: 'Wrong T2A token. Verify it or generate a new one.',
+    status: 'Token errado. Verifique ou gere um novo!',
   })
 }
 
@@ -111,13 +111,13 @@ const checkUserPassword = (buffer, hashedBuffer) => {
 const login = (userInfo, callback) => {
   const user = findUser(userInfo.username)
   if (!user.username) {
-    callback({ status: 'Cliente nao registrado' })
+    callback({ status: 'Cliente não registrado' })
     return
   }
 
   const hashedBuffer = user.encryptGCM(userInfo.password, Buffer.from(user.derivedKey.data), user.salt)
   if (checkUserPassword(user.password, hashedBuffer)) {
-    callback({ status: 'Usuario Logado com sucesso!' })
+    callback({ status: 'Usuário Logado com sucesso!' })
     return
   }
 
@@ -125,7 +125,7 @@ const login = (userInfo, callback) => {
 }
 
 io.on('connection', function (socket) {
-  console.log('New connection established.')
+  console.log('Nova conexão estabelecida')
 
   socket.on('checkIfUserAlreadyExists', function (userName, callback) {
     isNewUser(userName, callback)
