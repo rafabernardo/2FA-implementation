@@ -88,12 +88,23 @@ const options = {
 
   4: () => {
     readline.question('Informe o usuário do cliente a ser logado no servidor.\n > ', (username) => {
-      readline.question('Informe a chave 2FA recebida na autenticacao de token\n > ', async (key) => {
+      readline.question('Qual a senha do cliente?\n >', async (password) => {
         const { status } = await new Promise((resolve) => {
-          socket.emit('2FAToken', username, key, (answer) => {
+          socket.emit('login', { username, password }, (answer) => {
             resolve(answer)
           })
         })
+        if (status === 'Usuário Logado com sucesso!') {
+          readline.question('Informe a chave 2FA recebida na autenticacao de token\n > ', async (key) => {
+            const { status } = await new Promise((resolve) => {
+              socket.emit('2FAToken', username, key, (answer) => {
+                resolve(answer)
+              })
+            })
+            console.log(status)
+            return waitForUserInput()
+          })
+        }
         console.log(status)
         return waitForUserInput()
       })

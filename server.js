@@ -34,14 +34,9 @@ const verifyScryptHash = async (username, callback) => {
     })
     return console.log('Error ao procurar usuário')
   }
-  if (!clientInfo.derivedKey) {
-    callback({
-      status: 'Erro ao criar 2FA',
-    })
-    return console.log('Erro ao criar 2FA')
-  }
 
-  const twoFactorToken = createTwoFactorToken(clientInfo.derivedKey)
+  const derivedKey = crypto.pbkdf2Sync(clientInfo.password.toString('hex'), clientInfo.salt, 100000, 32, 'sha512')
+  const twoFactorToken = createTwoFactorToken(derivedKey)
   if (twoFactorToken) {
     callback({
       token: twoFactorToken,
@@ -55,9 +50,8 @@ const verifyScryptHash = async (username, callback) => {
 }
 
 const createTwoFactorToken = (key) => {
-  const buffer = Buffer.from(key)
   totp.options = { digits: 10, algorithm: 'sha512', step: 60 }
-  return totp.generate(buffer.toString('hex'))
+  return totp.generate(key.toString('hex'))
 }
 
 const checkTwoFactorToken = (username, key, callback) => {
@@ -66,8 +60,8 @@ const checkTwoFactorToken = (username, key, callback) => {
     callback({ status: 'Cliente nao registrado' })
     return
   }
-  const buffer = Buffer.from(user.derivedKey)
-  const match = totp.check(key, buffer.toString('hex'))
+  const derivedKey = crypto.pbkdf2Sync(user.password.toString('hex'), user.salt, 100000, 32, 'sha512')
+  const match = totp.check(key, derivedKey.toString('hex'))
   if (match) {
     callback({
       status: 'Usuário Logado com sucesso!',
@@ -99,10 +93,11 @@ const isNewUser = (userName, callback) => {
   callback(userNameAlreadyExists)
 }
 
-const checkUserPassword = (buffer, password, derivedKey) => {
+const checkUserPassword = (buffer, password, salt) => {
   const bData = Buffer.from(buffer, 'base64')
   const iv = bData.slice(64, 80)
-  const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(derivedKey.data), iv)
+  const derivedKey = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha512')
+  const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv)
   const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
   const keyBuffer = bData.slice(96)
 
@@ -120,7 +115,7 @@ const login = (userInfo, callback) => {
     return
   }
 
-  if (checkUserPassword(user.password, userInfo.password, user.derivedKey)) {
+  if (checkUserPassword(user.password, userInfo.password, user.salt)) {
     callback({ status: 'Usuário Logado com sucesso!' })
     return
   }
@@ -147,8 +142,8 @@ io.on('connection', function (socket) {
     verifyScryptHash(username, callback)
   })
 
-  socket.on('2FAToken', function (username, twoFactorKey, callback) {
-    checkTwoFactorToken(username, twoFactorKey, callback)
+  socket.on('2FAToken', function (username, key, callback) {
+    checkTwoFactorToken(username, key, callback)
   })
 })
 

@@ -1,30 +1,21 @@
 const crypto = require('crypto')
-const fsExtra = require('fs-extra')
 
 class Client {
   constructor(username, password) {
     this.username = username
     this.password = password
-    this.derivedKey = null
     this.salt = null
   }
 
   generateDerivedKey() {
-    if (this.derivedKey) {
-      return console.log('Key already generated.')
-    }
     this.salt = crypto.randomBytes(64).toString('hex')
     this.username = crypto.scryptSync(this.username, this.salt, 64)
-    this.derivedKey = crypto.pbkdf2Sync(this.password, this.salt, 100000, 32, 'sha512')
-    this.password = this.encryptGCM(this.password, this.derivedKey, this.salt)
+    this.password = this.encryptGCM(this.password, this.salt)
   }
 
-  getCurrentTime() {
-    return new Date()
-  }
-
-  encryptGCM(password, derivedKey, salt) {
+  encryptGCM(password, salt) {
     const iv = crypto.randomBytes(16)
+    const derivedKey = crypto.pbkdf2Sync(this.password, this.salt, 100000, 32, 'sha512')
     const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv)
     const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
     const tag = cipher.getAuthTag()
@@ -32,41 +23,8 @@ class Client {
   }
 
   generateNewClientRequest() {
-    if (!this.derivedKey) {
-      this.generateDerivedKey()
-    }
-
-    return {
-      username: this.username,
-      derivedKey: this.derivedKey,
-      currentTime: this.getCurrentTime(),
-    }
+    this.generateDerivedKey()
   }
-
-  // newClientSocket = async (socket) => {
-  //   socket.emit('newClient', this.generateNewClientRequest(), (response) => {
-  //     console.log(response)
-  //     return response
-  //   })
-  // }
-
-  // clientLoginSocket = async (socket) => {
-  //   socket.emit('login', this.generateNewClientRequest(), (response) => {
-  //     console.log(response.status)
-  //   })
-  // }
-
-  // checkTwoFactorAuthSocket = async (key, socket) => {
-  //   socket.emit('2FAToken', this.generateNewClientRequest(), key, (response) => {
-  //     console.log(response)
-  //   })
-  // }
-
-  // registerUser(client, socket) {
-  //   socket.emit('newClient', client, (response) => {
-  //     console.log(response)
-  //   })
-  // }
 }
 
 module.exports = Client
