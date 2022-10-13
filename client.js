@@ -4,6 +4,7 @@ class Client {
   constructor(username, password) {
     this.username = username
     this.password = password
+    this.active2fa = false
     this.salt = null
   }
 
