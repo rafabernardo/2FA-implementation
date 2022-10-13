@@ -31,8 +31,8 @@ Opcoes:\n
 2- Autenticacao com senha\n
 3- Gerar token 2FA\n
 4- Autenticação 2FA\n
-6- Sair do programa \n
-7- Listar clientes - DEBUG \n
+5- Sair do programa \n
+6- Listar clientes - DEBUG \n
 ----------------- \n
 > `
 
@@ -99,12 +99,12 @@ const options = {
       })
     })
   },
-  6: () => {
+  5: () => {
     console.log('Bye-bye!')
     readline.close()
     return process.exit()
   },
-  7: () => {
+  6: () => {
     const { users } = JSON.parse(fsExtra.readFileSync('./users.json', 'utf-8'))
     users.map((user) => {
       console.log(user)

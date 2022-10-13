@@ -99,10 +99,15 @@ const isNewUser = (userName, callback) => {
   callback(userNameAlreadyExists)
 }
 
-const checkUserPassword = (buffer, hashedBuffer) => {
-  const keyBuffer = Buffer.from(buffer, 'hex')
-  if (keyBuffer.length === hashedBuffer.length) {
-    const match = crypto.timingSafeEqual(hashedBuffer, keyBuffer)
+const checkUserPassword = (buffer, password, derivedKey) => {
+  const bData = Buffer.from(buffer, 'base64')
+  const iv = bData.slice(64, 80)
+  const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(derivedKey.data), iv)
+  const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
+  const keyBuffer = bData.slice(96)
+
+  if (keyBuffer.length === encrypted.length) {
+    const match = crypto.timingSafeEqual(encrypted, keyBuffer)
     return match
   }
   return false
@@ -115,8 +120,7 @@ const login = (userInfo, callback) => {
     return
   }
 
-  const hashedBuffer = user.encryptGCM(userInfo.password, Buffer.from(user.derivedKey.data), user.salt)
-  if (checkUserPassword(user.password, hashedBuffer)) {
+  if (checkUserPassword(user.password, userInfo.password, user.derivedKey)) {
     callback({ status: 'Usuário Logado com sucesso!' })
     return
   }

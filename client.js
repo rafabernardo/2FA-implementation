@@ -13,7 +13,7 @@ class Client {
     if (this.derivedKey) {
       return console.log('Key already generated.')
     }
-    this.salt = crypto.randomBytes(12).toString('hex')
+    this.salt = crypto.randomBytes(64).toString('hex')
     this.username = crypto.scryptSync(this.username, this.salt, 64)
     this.derivedKey = crypto.pbkdf2Sync(this.password, this.salt, 100000, 32, 'sha512')
     this.password = this.encryptGCM(this.password, this.derivedKey, this.salt)
@@ -24,9 +24,11 @@ class Client {
   }
 
   encryptGCM(password, derivedKey, salt) {
-    const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, salt)
+    const iv = crypto.randomBytes(16)
+    const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv)
     const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
-    return encrypted
+    const tag = cipher.getAuthTag()
+    return Buffer.concat([Buffer.from(salt, 'hex'), iv, tag, encrypted])
   }
 
   generateNewClientRequest() {
